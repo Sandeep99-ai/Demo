@@ -1,0 +1,424 @@
+{
+    "Name": "vehicle_sales",
+    "Description": "vehicle_sales table derived from Excel data dictionary",
+    "Columns": [
+        {
+            "Name": "id(PK)",
+            "Type": "int",
+            "Comment": "Unique identifier for each vehicle sale record.",
+            "Parameters": {
+                "unique_values": "eg:6286220,6286224 etc",
+                "usage": "A system-generated primary key that uniquely identifies each transaction. It ensures data integrity and is used for joining with other tables. No two records share the same ID."
+            }
+        },
+        {
+            "Name": "location_id",
+            "Type": "int",
+            "Comment": "Identifier for the location where the sale occurred.",
+            "Parameters": {
+                "unique_values": "eg: 1, 11, 2080 etc",
+                "usage": "Represents the dealership or branch where the sale was made. Useful for regional performance analysis and mapping. Can be linked to a location metadata table."
+            }
+        },
+        {
+            "Name": "date_added",
+            "Type": "datetime",
+            "Comment": "Date the sale record was added.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Indicates when the record was entered into the system. Useful for tracking data entry timelines and system updates. May differ from actual deal date."
+            }
+        },
+        {
+            "Name": "customer_number",
+            "Type": "varchar",
+            "Comment": "Unique identifier for the customer.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "A unique alphanumeric code assigned to each customer. Helps in tracking customer history and repeat purchases. Can be used for customer segmentation."
+            }
+        },
+        {
+            "Name": "first_name",
+            "Type": "varchar",
+            "Comment": "Customer's first name.",
+            "Parameters": {
+                "unique_values": "empty column",
+                "usage": "Contains the first name of the customer. Only one unique value suggests placeholder or anonymized data. Not reliable for personalization or analysis."
+            }
+        },
+        {
+            "Name": "middle_name",
+            "Type": "varchar",
+            "Comment": "Customer's middle name.",
+            "Parameters": {
+                "unique_values": "empty column",
+                "usage": "Stores the middle name of the customer. Like first name, low uniqueness implies missing or defaulted values. Often unused in analysis."
+            }
+        },
+        {
+            "Name": "last_name",
+            "Type": "varchar",
+            "Comment": "Customer's last name.",
+            "Parameters": {
+                "unique_values": "empty column",
+                "usage": "Customer\u2019s surname or family name. Uniform value across records suggests anonymization. Not suitable for identity verification."
+            }
+        },
+        {
+            "Name": "address_one",
+            "Type": "varchar",
+            "Comment": "Primary address of the customer.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "First line of the customer\u2019s residential or mailing address. Useful for geocoding and demographic profiling. Often includes street name and number."
+            }
+        },
+        {
+            "Name": "address_two",
+            "Type": "varchar",
+            "Comment": "Secondary address of the customer.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Optional second line of address, such as apartment or suite number. Enhances location precision. May be blank for many records."
+            }
+        },
+        {
+            "Name": "city",
+            "Type": "varchar",
+            "Comment": "City of the customer's address.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Specifies the city where the customer resides. Useful for regional analysis and clustering. Can be used with state and zip for full location."
+            }
+        },
+        {
+            "Name": "state",
+            "Type": "varchar",
+            "Comment": "State of the customer's address.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Indicates the state or province of the customer\u2019s residence. Helps in grouping by administrative regions. Often used in compliance and reporting."
+            }
+        },
+        {
+            "Name": "zip",
+            "Type": "varchar",
+            "Comment": "Postal code of the customer's address.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Represents the postal or ZIP code for the customer\u2019s location. Useful for geospatial mapping and delivery logistics. Can be used to infer income or population density."
+            }
+        },
+        {
+            "Name": "home_phone",
+            "Type": "varchar",
+            "Comment": "Customer's home phone number.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "No unique values suggest this field is either masked or not collected. Typically used for contact verification. May be deprecated."
+            }
+        },
+        {
+            "Name": "work_phone",
+            "Type": "varchar",
+            "Comment": "Customer's work phone number.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Similar to home phone, this field is empty or anonymized. Historically used for daytime contact. Not useful in current dataset."
+            }
+        },
+        {
+            "Name": "cell_phone",
+            "Type": "varchar",
+            "Comment": "Customer's mobile phone number.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Mobile contact number of the customer. Zero uniqueness implies masking or non-collection. Often used for SMS or app notifications."
+            }
+        },
+        {
+            "Name": "email",
+            "Type": "varchar",
+            "Comment": "Customer's email address.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Primary digital contact for the customer. High uniqueness indicates good data quality. Useful for marketing, communication, and identity verification."
+            }
+        },
+        {
+            "Name": "b_email",
+            "Type": "varchar",
+            "Comment": "Indicates if customer opted in for email communication.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Binary or flag field showing email consent. Helps in filtering customers for campaigns. May follow GDPR or similar compliance rules."
+            }
+        },
+        {
+            "Name": "b_phone",
+            "Type": "varchar",
+            "Comment": "Indicates if customer opted in for phone communication.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Shows whether the customer agreed to receive phone calls. Zero uniqueness suggests missing or default values. Important for telemarketing compliance."
+            }
+        },
+        {
+            "Name": "b_mail",
+            "Type": "varchar",
+            "Comment": "Indicates if customer opted in for mail communication.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Indicates consent for receiving physical mail. Often used for direct mail campaigns. Zero uniqueness may imply default opt-out."
+            }
+        },
+        {
+            "Name": "deal_number",
+            "Type": "varchar",
+            "Comment": "Unique identifier for the vehicle deal.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Transaction-specific identifier used to track the deal. Can be used to join with financing or inventory records. May be reused across systems."
+            }
+        },
+        {
+            "Name": "deal_date",
+            "Type": "datetime",
+            "Comment": "Date the deal was finalized.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Represents the actual date of sale or contract signing. Crucial for revenue recognition and trend analysis. May differ from stock or entry date."
+            }
+        },
+        {
+            "Name": "vin",
+            "Type": "char",
+            "Comment": "Vehicle Identification Number.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Globally unique identifier for each vehicle. Used for tracking, insurance, and registration. Essential for vehicle history and fraud prevention."
+            }
+        },
+        {
+            "Name": "stock_no",
+            "Type": "varchar",
+            "Comment": "Internal stock number for the vehicle.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Dealership-assigned inventory number. Helps in managing vehicle stock and availability. May not be unique across locations."
+            }
+        },
+        {
+            "Name": "year",
+            "Type": "char",
+            "Comment": "Manufacturing year of the vehicle.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Indicates the model year of the vehicle. Useful for depreciation, valuation, and lifecycle analysis. Often used in filtering and grouping."
+            }
+        },
+        {
+            "Name": "make",
+            "Type": "varchar",
+            "Comment": "Vehicle manufacturer.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Brand or company that produced the vehicle (e.g., Toyota, Ford). Key for brand-level analysis and market share studies. Often paired with model and year."
+            }
+        },
+        {
+            "Name": "model",
+            "Type": "varchar",
+            "Comment": "Vehicle model.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Specific model name of the vehicle (e.g., Civic, Corolla). Used for detailed vehicle classification. Important for pricing and inventory decisions."
+            }
+        },
+        {
+            "Name": "odometer",
+            "Type": "mediumint",
+            "Comment": "Mileage of the vehicle.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Shows how much the vehicle has been driven. Critical for valuation and wear analysis. May influence financing and warranty terms."
+            }
+        },
+        {
+            "Name": "stock_date",
+            "Type": "datetime",
+            "Comment": "Date the vehicle was stocked.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Date when the vehicle was added to dealership inventory. Useful for aging and turnover analysis. May precede deal date significantly."
+            }
+        },
+        {
+            "Name": "vehicle_cost",
+            "Type": "decimal",
+            "Comment": "Cost of the vehicle.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Amount paid by the dealership to acquire the vehicle. Used for margin and profitability calculations. May include transportation or prep fees."
+            }
+        },
+        {
+            "Name": "rep_number",
+            "Type": "varchar",
+            "Comment": "Sales representative's identifier.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Unique ID for the salesperson handling the deal. Useful for performance tracking and commission calculation. Can be linked to HR systems."
+            }
+        },
+        {
+            "Name": "rep_name",
+            "Type": "varchar",
+            "Comment": "Name of the sales representative.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Full name of the salesperson. Used for reporting and recognition. May be duplicated across locations or teams."
+            }
+        },
+        {
+            "Name": "deal_type_id",
+            "Type": "tinyint",
+            "Comment": "Identifier for the type of deal.",
+            "Parameters": {
+                "unique_values": "1 to 4",
+                "usage": "Categorical field representing deal structure (e.g., lease, cash, finance). Important for financial modeling and customer segmentation. Can be mapped to descriptive labels."
+            }
+        },
+        {
+            "Name": "purchase_price",
+            "Type": "decimal",
+            "Comment": "Final purchase price of the vehicle.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Total amount paid by the customer. Includes vehicle cost, fees, and taxes. Used for revenue and margin analysis."
+            }
+        },
+        {
+            "Name": "bank",
+            "Type": "varchar",
+            "Comment": "Bank involved in the financing.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Name of the financial institution providing the loan. Useful for lender performance and partnership analysis. May be null for cash deals."
+            }
+        },
+        {
+            "Name": "rate",
+            "Type": "decimal",
+            "Comment": "Interest rate for the financing.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Annual percentage rate applied to the loan. Influences monthly payment and total cost. Important for affordability and risk modeling."
+            }
+        },
+        {
+            "Name": "term",
+            "Type": "int",
+            "Comment": "Loan term in months.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Duration of the loan agreement. Common terms include 36, 48, or 60 months. Used to calculate amortization and payment schedules."
+            }
+        },
+        {
+            "Name": "monthly_payment",
+            "Type": "decimal",
+            "Comment": "Monthly payment amount.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Amount the customer pays each month. Derived from rate, term, and purchase price. Key metric for affordability and credit analysis."
+            }
+        },
+        {
+            "Name": "trade_vin",
+            "Type": "char",
+            "Comment": "VIN of the trade-in vehicle.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Identification number of the vehicle traded in by the customer. Useful for inventory replenishment and valuation. May be null if no trade-in."
+            }
+        },
+        {
+            "Name": "status_id",
+            "Type": "tinyint",
+            "Comment": "Status identifier of the deal.",
+            "Parameters": {
+                "unique_values": "1,2",
+                "usage": "Indicates current state of the deal (e.g., active, cancelled). Used for workflow and reporting. Can be mapped to status labels."
+            }
+        },
+        {
+            "Name": "exclusion_flag",
+            "Type": "int",
+            "Comment": "Flag indicating exclusion from analysis.",
+            "Parameters": {
+                "unique_values": "0,1",
+                "usage": "Binary indicator for excluding records from reporting or modeling. Often used for test data or incomplete entries. Helps maintain data quality."
+            }
+        },
+        {
+            "Name": "latitude",
+            "Type": "decimal",
+            "Comment": "Geographic latitude of the sale location.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Precise north-south coordinate of the sale. Enables geospatial mapping and clustering. Often paired with longitude."
+            }
+        },
+        {
+            "Name": "longitude",
+            "Type": "decimal",
+            "Comment": "Geographic longitude of the sale location.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "East-west coordinate of the sale location. Used for mapping and regional analysis. Can be visualized on GIS platforms."
+            }
+        },
+        {
+            "Name": "gis_quality",
+            "Type": "int",
+            "Comment": "Quality score of geographic data.",
+            "Parameters": {
+                "unique_values": "[nan, 100.0, 90.0, 85.0, 87.0, 19.0, 49.0, 59.0, 84.0, 70.0, 86.0, 71.0, 40.0, 80.0, 50.0, 0.0, 20.0]",
+                "usage": "Numeric score indicating accuracy of geolocation. Higher values suggest better precision. Useful for filtering unreliable coordinates."
+            }
+        },
+        {
+            "Name": "orig_ymm",
+            "Type": "varchar",
+            "Comment": "Original Year-Make-Model string.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Raw string combining year, make, and model. May be used for parsing or standardization. Helps in matching with external vehicle databases."
+            }
+        },
+        {
+            "Name": "data_style_id",
+            "Type": "char",
+            "Comment": "Identifier for data style or format.",
+            "Parameters": {
+                "unique_values": NaN,
+                "usage": "Represents the format or template used during data entry. Useful for source tracking and normalization. May vary by system or vendor."
+            }
+        }
+    ],
+    "Parameters": {
+        "relationships": [
+            {
+                "relationship_name": "vehicle_sales_to_inventory",
+                "description": "Vehicle sales are matched with inventory records via location ID.",
+                "from_table": "analytics.vehicle_sales",
+                "from_column": "location_id",
+                "to_table": "analytics.inventory",
+                "to_column": "location_id",
+                "relationship_type": "one-to-one"
+            }
+        ]
+    }
+}
