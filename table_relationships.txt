@@ -1,0 +1,95 @@
+8.Table Relationships:
+  - relationship_name: dps_settings_to_excluded_makes
+    description: Each DPS setting may exclude specific conquest makes for the same location.
+    from_table: cotillion_admin.dps_settings
+    from_column: location_id
+    to_table: cotillion_admin.dps_location_excluded_conquest_makes
+    to_column: location_id_fk
+    relationship_type: one-to-many
+
+  - relationship_name: dps_settings_to_map_areas
+    description: Each DPS setting may be associated with multiple map areas for the same location.
+    from_table: cotillion_admin.dps_settings
+    from_column: location_id
+    to_table: cotillion_admin.dps_map_areas
+    to_column: location_id
+    relationship_type: one-to-many
+  - relationship_name: dps_settings_to_location_makes
+    description: Each DPS setting may be associated with multiple location makes for the same location.
+    from_table: cotillion_admin.dps_settings
+    from_column: location_id
+    to_table: cotillion_admin.location_makes
+    to_column: location_id_fk
+    relationship_type: one-to-many
+
+  - relationship_name: crm_contact_to_entity_type
+    description: Each CRM contact is associated with a single entity type.
+    from_table: cotillion_crm.crm_entities_contacts
+    from_column: entity_type_id_fk
+    to_table: cotillion_admin.sys_entity_types
+    to_column: entity_type_id_pk
+    relationship_type: many-to-one
+
+  - relationship_name: channel_preferences_to_mosaic_definitions
+    description: Channel preferences are linked to mosaic definitions via household ID.
+    from_table: analytics.experian_mosaic_channel_preferences
+    from_column: household_id
+    to_table: analytics.experian_mosaic_definitions
+    to_column: household_id
+    relationship_type: one-to-one
+
+  - relationship_name: channel_preferences_to_mosaic_attributes
+    description: Channel preferences are linked to mosaic attributes via household ID.
+    from_table: analytics.experian_mosaic_channel_preferences
+    from_column: household_id
+    to_table: analytics.experian_mosaic_attributes
+    to_column: household_id
+    relationship_type: one-to-one
+
+  - relationship_name: message_attributes_to_extended_attributes
+    description: Message attributes are linked to extended message attributes via message ID.
+    from_table: analytics.experian_message_attributes
+    from_column: message_id
+    to_table: analytics.experian_extended_message_attributes
+    to_column: message_id
+    relationship_type: one-to-many
+
+  - relationship_name: messages_to_extended_attributes
+    description: Messages are linked to extended message attributes via message ID.
+    from_table: analytics.experian_messages
+    from_column: id
+    to_table: analytics.experian_extended_message_attributes
+    to_column: message_id
+    relationship_type: one-to-many
+
+  - relationship_name: messages_to_message_attributes
+    description: Messages are linked to message attributes via message ID.
+    from_table: analytics.experian_messages
+    from_column: id
+    to_table: analytics.experian_message_attributes
+    to_column: message_id
+    relationship_type: one-to-many
+
+  - relationship_name: mosaic_definitions_to_extended_attributes
+    description: Mosaic definitions are linked to extended message attributes via mosaic code.
+    from_table: analytics.experian_mosaic_definitions
+    from_column: code
+    to_table: analytics.experian_extended_message_attributes
+    to_column: mosaic_code
+    relationship_type: one-to-many
+
+  - relationship_name: mosaic_definitions_to_channel_preferences
+    description: Mosaic definitions are linked to channel preferences via mosaic code.
+    from_table: analytics.experian_mosaic_definitions
+    from_column: code
+    to_table: analytics.experian_mosaic_channel_preferences
+    to_column: mosaic_code
+    relationship_type: one-to-many
+
+  - relationship_name: vehicle_sales_to_inventory
+    description: Vehicle sales are matched with inventory records via location ID.
+    from_table: analytics.vehicle_sales
+    from_column: location_id
+    to_table: analytics.inventory
+    to_column: location_id
+    relationship_type: one-to-one
