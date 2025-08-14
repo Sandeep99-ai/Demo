@@ -212,4 +212,45 @@ os.makedirs(output_dir, exist_ok=True)
 create_json_schema_from_excel(excel_file, yaml_file, output_dir)
 
 
- 
+ {
+  "Name": "vehicle_sales",
+  "Description": "vehicle_sales table derived from Excel data dictionary",
+  
+  "StorageDescriptor": {
+    "Columns": [
+      {
+        "Name": "id",             // Remove "(PK)" — keep names simple
+        "Type": "int",
+        "Comment": "Unique identifier for each vehicle sale record.",
+        "Parameters": {
+          "unique_values": "e.g., 6286220,6286224",
+          "usage": "System-generated primary key..."
+        }
+      },
+      {
+        "Name": "location_id",
+        "Type": "int",
+        "Comment": "Identifier for the location where the sale occurred.",
+        "Parameters": {
+          "unique_values": "e.g., 1, 11, 2080",
+          "usage": "Represents dealership location..."
+        }
+      }
+      // ... add other columns similarly ...
+    ],
+
+    // Required: Even for columns-only metadata, you must include a StorageDescriptor with minimally SerDeInfo
+    "SerdeInfo": {
+      "SerializationLibrary": "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe",
+      "Parameters": {
+        "serialization.format": "1"
+      }
+    }
+  },
+
+  // Table-level parameters for metadata like relationships:
+  "Parameters": {
+    "relationships": "{\"relationships\":[{\"relationship_name\":\"vehicle_sales_to_inventory\",\"description\":\"Vehicle sales are matched with inventory records via location ID.\",\"from_table\":\"analytics.vehicle_sales\",\"from_column\":\"location_id\",\"to_table\":\"analytics.inventory\",\"to_column\":\"location_id\",\"relationship_type\":\"one-to-one\"}]}"
+  }
+}
+
