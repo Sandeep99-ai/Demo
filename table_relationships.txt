@@ -96,7 +96,6 @@
 
 
 
-
 import pandas as pd
 import json
 import yaml
@@ -128,22 +127,34 @@ def create_json_schema_from_excel(excel_path, yaml_path, output_directory):
         print(f"Error reading YAML file: {e}")
         relationships_list = []  # Proceed without relationships
 
-    # --- Step 3: Organize relationships by table (extract table name after dot) ---
+    # --- Step 3: Organize relationships by table (from 'from_table' or '_table') ---
     relationships_by_table = defaultdict(list)
     for rel in relationships_list:
-        try:
-            full_table_name = rel['from_table']  # e.g., "schema1.Customers"
-            table_name_only = full_table_name.split('.')[-1]  # get only "Customers"
-            relationships_by_table[table_name_only].append(rel)
-        except KeyError:
-            continue  # skip if 'from_table' key missing
+        if not isinstance(rel, dict):
+            print(f"Skipping invalid relationship entry: {rel}")
+            continue
+
+        # Try 'from_table' first, then '_table'
+        full_table_name = rel.get('from_table') or rel.get('_table')
+        if not full_table_name:
+            print(f"Skipping relationship with missing table key: {rel}")
+            continue
+
+        table_name_only = full_table_name.split('.')[-1]  # get table name after dot
+        relationships_by_table[table_name_only].append(rel)
+
+    print(f"Organized relationships for tables: {list(relationships_by_table.keys())}")
 
     # --- Step 4: Organize rows by table ---
     tables_dict = defaultdict(list)
     for row in rows_as_dicts:
         table_name = row.get('TABLE NAME')
-        if table_name:  # skip row if TABLE NAME missing
-            tables_dict[table_name].append(row)
+        if not table_name:
+            print(f"Skipping row with missing TABLE NAME: {row}")
+            continue
+        tables_dict[table_name].append(row)
+
+    print(f"Found tables in Excel: {list(tables_dict.keys())}")
 
     # --- Step 5: Create simplified JSON schema for each table ---
     for table_name, columns_rows in tables_dict.items():
@@ -162,8 +173,9 @@ def create_json_schema_from_excel(excel_path, yaml_path, output_directory):
                     }
                 }
                 columns.append(column_info)
-            except KeyError:
-                continue  # skip column if required keys missing
+            except KeyError as e:
+                print(f"Skipping column due to missing key {e} in row: {row}")
+                continue
 
         table_relationships = relationships_by_table.get(table_name, [])
 
