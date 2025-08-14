@@ -104,8 +104,9 @@ import os
 
 def create_json_schema_from_excel(excel_path, yaml_path, output_directory):
     """
-    Parses an Excel data dictionary where row data is nested under a 'Row Dictionary' key.
-    It combines this with a YAML file of table relationships to create simplified JSON schemas.
+    Parses an Excel data dictionary using direct key access, assuming a specific nested
+    structure ('Row Dictionary'), and combines it with a YAML file of table relationships
+    to create simplified JSON schemas.
 
     Args:
         excel_path (str): Path to the Excel workbook.
@@ -115,11 +116,7 @@ def create_json_schema_from_excel(excel_path, yaml_path, output_directory):
     # --- Step 1: Read the first sheet of the Excel file ---
     try:
         df = pd.read_excel(excel_path, sheet_name=0)
-        # This structure assumes the primary column is named 'Row Dictionary'
-        # and its content is a string representation of a dictionary.
-        # We will need to parse it.
-        # If pandas reads it directly as objects, this is simpler.
-        # For now, let's assume it's structured correctly upon reading.
+        # Assumes pandas correctly interprets the cell content as dictionary objects.
         rows_as_dicts = df.to_dict(orient='records')
         print("Excel file read successfully.")
     except Exception as e:
@@ -130,7 +127,7 @@ def create_json_schema_from_excel(excel_path, yaml_path, output_directory):
     try:
         with open(yaml_path, 'r') as stream:
             relationships_data = yaml.safe_load(stream)
-            relationships_list = relationships_data.get('Table Relationships', [])
+            relationships_list = relationships_data['Table Relationships']
         print("YAML file read successfully.")
     except Exception as e:
         print(f"Error reading YAML file: {e}")
@@ -139,64 +136,71 @@ def create_json_schema_from_excel(excel_path, yaml_path, output_directory):
     # --- Step 3: Organize relationships by table name ---
     relationships_by_table = defaultdict(list)
     for rel in relationships_list:
-        from_table_full = rel.get('from_table', '')
+        from_table_full = rel['from_table']
         table_name_only = from_table_full.split('.')[-1]
         if table_name_only:
             relationships_by_table[table_name_only].append(rel)
 
-    # --- Step 4: Group all rows by their table name, looking inside 'Row Dictionary' ---
+    # --- Step 4: Group all rows by their table name using direct access ---
     tables_dict = defaultdict(list)
-    for row_container in rows_as_dicts:
-        # **FIX:** Access the nested dictionary with the key 'Row Dictionary'.
-        row_data = row_container.get('Row Dictionary', {})
+    try:
+        for row_container in rows_as_dicts:
+            # **FIX:** Using direct bracket access as requested.
+            row_data = row_container['Row Dictionary']
+            table_name = row_data['TABLE NAME']
+            
+            if table_name and pd.notna(table_name):
+                table_name_key = str(table_name).split('.')[-1]
+                tables_dict[table_name_key].append(row_data)
+            else:
+                print(f"Warning: Skipping a row because 'TABLE NAME' is empty. Row content: {row_container}")
+    except KeyError as e:
+        print(f"A required key is missing: {e}. Please check your Excel file's structure and column names.")
+        return
 
-        # Now get the table name from within the nested dictionary.
-        table_name = row_data.get('TABLE NAME')
-        if table_name and pd.notna(table_name):
-            table_name_key = str(table_name).split('.')[-1]
-            # We append the inner dictionary, which has all the column info.
-            tables_dict[table_name_key].append(row_data)
-        else:
-            print(f"Warning: Skipping a row because 'TABLE NAME' was not found inside 'Row Dictionary'. Row content: {row_container}")
 
     # --- Step 5: Create a simplified JSON schema for each table ---
-    for table_name, columns_rows in tables_dict.items():
-        original_full_name = columns_rows[0].get('TABLE NAME', table_name)
-        sanitized_file_name = original_full_name.replace('.', '_')
+    try:
+        for table_name, columns_rows in tables_dict.items():
+            original_full_name = columns_rows[0]['TABLE NAME']
+            sanitized_file_name = original_full_name.replace('.', '_')
 
-        columns = []
-        for row in columns_rows:
-            # **FIX:** Access all column data from the nested dictionary.
-            column_info = {
-                "Name": row.get('COLUMN NAME', ''),
-                "Type": row.get('DATA TYPE OF THE COLUMN', 'string'),
-                "Comment": row.get('COLUMN DESCRIPTION', ''),
+            columns = []
+            for row in columns_rows:
+                # **FIX:** Using direct bracket access for all fields.
+                column_info = {
+                    "Name": row['COLUMN NAME'],
+                    "Type": row['DATA TYPE OF THE COLUMN'],
+                    "Comment": row['COLUMN DESCRIPTION'],
+                    "Parameters": {
+                        "unique_values": row['UNIQUE VALUES IN THE COLUMN'],
+                        "usage": row['USAGE OF THE COLUMN']
+                    }
+                }
+                columns.append(column_info)
+
+            table_relationships = relationships_by_table[table_name]
+
+            schema = {
+                "Name": sanitized_file_name,
+                "Description": f"{sanitized_file_name} table derived from Excel data dictionary",
+                "Columns": columns,
                 "Parameters": {
-                    "unique_values": row.get('UNIQUE VALUES IN THE COLUMN', 'N/A'),
-                    "usage": row.get('USAGE OF THE COLUMN', '')
+                    "relationships": table_relationships
                 }
             }
-            columns.append(column_info)
 
-        table_relationships = relationships_by_table.get(table_name, [])
-
-        schema = {
-            "Name": sanitized_file_name,
-            "Description": f"{sanitized_file_name} table derived from Excel data dictionary",
-            "Columns": columns,
-            "Parameters": {
-                "relationships": table_relationships
-            }
-        }
-
-        # --- Step 6: Write the generated JSON to a file ---
-        output_path = os.path.join(output_directory, f"{sanitized_file_name}.json")
-        try:
+            # --- Step 6: Write the generated JSON to a file ---
+            output_path = os.path.join(output_directory, f"{sanitized_file_name}.json")
             with open(output_path, 'w') as f:
                 json.dump(schema, f, indent=4)
             print(f"Created JSON schema for {original_full_name} at {output_path}")
-        except IOError as e:
-            print(f"Could not write file {output_path}: {e}")
+
+    except KeyError as e:
+        print(f"A required column name is missing from the 'Row Dictionary': {e}. Please check your Excel data.")
+        return
+    except IOError as e:
+        print(f"Could not write file: {e}")
 
 
 # --- Example Usage ---
@@ -206,3 +210,6 @@ output_dir = 'output'
 
 os.makedirs(output_dir, exist_ok=True)
 create_json_schema_from_excel(excel_file, yaml_file, output_dir)
+
+
+ 
