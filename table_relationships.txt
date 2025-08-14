@@ -97,65 +97,60 @@
 
 
 
+
 import pandas as pd
 import json
 import yaml
 from collections import defaultdict
+import os
 
 def create_json_schema_from_excel(excel_path, yaml_path, output_directory):
     """
-    Parses an Excel data dictionary and a YAML file with table relationships
-    to create JSON schema files for each table.
+    Parses the first sheet of an Excel data dictionary and a YAML file with table relationships
+    to create simplified JSON schema files for each table.
 
     Args:
-        excel_path (str): The file path for the Excel workbook.
-        yaml_path (str): The file path for the YAML file containing relationships.
-        output_directory (str): The directory where the JSON files will be saved.
+        excel_path (str): Path to the Excel workbook.
+        yaml_path (str): Path to the YAML file containing relationships.
+        output_directory (str): Directory where JSON files will be saved.
     """
+    # --- Step 1: Read first sheet of Excel and skip the first row ---
     try:
-        # Read the first sheet of the Excel file
         df = pd.read_excel(excel_path, sheet_name=0)
-        print("Successfully read the Excel file.")
-    except FileNotFoundError:
-        print(f"Error: The file at {excel_path} was not found.")
-        return
+        df = df.iloc[1:]  # Skip the first row
+        rows_as_dicts = df.to_dict(orient='records')
+        print("Excel file read successfully. Processing rows from second row onward.")
     except Exception as e:
-        print(f"An error occurred while reading the Excel file: {e}")
+        print(f"Error reading Excel file: {e}")
         return
 
+    # --- Step 2: Read YAML relationships ---
     try:
-        # Read and parse the YAML file for relationships
         with open(yaml_path, 'r') as stream:
             relationships_data = yaml.safe_load(stream)
-            # The user provided the relationships under a key, so we extract the list
             relationships_list = relationships_data.get('Table Relationships', [])
-        print("Successfully read and parsed the YAML file.")
-    except FileNotFoundError:
-        print(f"Error: The file at {yaml_path} was not found.")
-        return
-    except yaml.YAMLError as exc:
-        print(f"Error parsing YAML file: {exc}")
-        return
+        print("YAML file read successfully.")
     except Exception as e:
-        print(f"An error occurred while reading the YAML file: {e}")
+        print(f"Error reading YAML file: {e}")
         return
 
-
-    # Organize relationships by the 'from_table'
+    # --- Step 3: Organize relationships by table ---
     relationships_by_table = defaultdict(list)
     for rel in relationships_list:
         relationships_by_table[rel['from_table']].append(rel)
 
-    # Group the dataframe by table name
-    tables = df.groupby('TABLE NAME')
+    # --- Step 4: Organize rows by table ---
+    tables_dict = defaultdict(list)
+    for row in rows_as_dicts:
+        table_name = row['TABLE NAME']
+        tables_dict[table_name].append(row)
 
-    # Process each table
-    for table_name, group in tables:
-        # Sanitize table name for file naming
+    # --- Step 5: Create simplified JSON schema for each table ---
+    for table_name, columns_rows in tables_dict.items():
         sanitized_table_name = table_name.replace('.', '_')
 
         columns = []
-        for _, row in group.iterrows():
+        for row in columns_rows:
             column_info = {
                 "Name": row['COLUMN NAME'],
                 "Type": row['DATA TYPE OF THE COLUMN'],
@@ -169,55 +164,30 @@ def create_json_schema_from_excel(excel_path, yaml_path, output_directory):
 
         table_relationships = relationships_by_table.get(table_name, [])
 
+        # --- Simplified schema ---
         schema = {
             "Name": sanitized_table_name,
             "Description": f"{sanitized_table_name} table derived from Excel data dictionary",
-            "StorageDescriptor": {
-                "Columns": columns,
-                "Location": f"s3://your-bucket/{sanitized_table_name}/",
-                "InputFormat": "org.apache.hadoop.mapred.TextInputFormat",
-                "OutputFormat": "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat",
-                "SerdeInfo": {
-                    "SerializationLibrary": "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe",
-                    "Parameters": {"serialization.format": "1"}
-                }
-            },
-            "PartitionKeys": [],
-            "TableType": "EXTERNAL_TABLE",
+            "Columns": columns,
             "Parameters": {
-                "relationships": json.dumps({"relationships": table_relationships}) if table_relationships else "{}"
+                "relationships": table_relationships if table_relationships else []
             }
         }
 
-        # Write the JSON schema to a file
-        output_path = f"{output_directory}/{sanitized_table_name}.json"
+        # --- Step 6: Write JSON to file ---
+        output_path = os.path.join(output_directory, f"{sanitized_table_name}.json")
         try:
             with open(output_path, 'w') as f:
                 json.dump(schema, f, indent=4)
-            print(f"Successfully created JSON schema for {table_name} at {output_path}")
+            print(f"Created JSON schema for {table_name} at {output_path}")
         except IOError as e:
-            print(f"Could not write to file {output_path}. Error: {e}")
+            print(f"Could not write file {output_path}: {e}")
 
 
-if __name__ == '__main__':
-    # --- Instructions ---
-    # 1. Save your Excel data dictionary as 'data_dictionary.xlsx'
-    #    in the same directory as this script.
-    #    Ensure the columns are named: 'TABLE NAME', 'COLUMN NAME',
-    #    'DATA TYPE OF THE COLUMN', 'COLUMN DESCRIPTION',
-    #    'UNIQUE VALUES IN THE COLUMN', 'USAGE OF THE COLUMN'
-    # 2. Save your YAML relationships as 'relationships.yaml' in the same directory.
-    #    Make sure the YAML content is properly formatted.
-    # 3. Create a directory named 'output' for the generated JSON files.
-    # 4. Run the script.
+# --- Example Usage ---
+excel_file = 'data_dictionary.xlsx'
+yaml_file = 'relationships.yaml'
+output_dir = 'output'
 
-    excel_file = 'data_dictionary.xlsx'
-    yaml_file = 'relationships.yaml'
-    output_dir = 'output'
-
-    # Create the output directory if it doesn't exist
-    import os
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    create_json_schema_from_excel(excel_file, yaml_file, output_dir)
+os.makedirs(output_dir, exist_ok=True)
+create_json_schema_from_excel(excel_file, yaml_file, output_dir)
