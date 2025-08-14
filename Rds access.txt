@@ -1,0 +1,98 @@
+Alright — here’s the **full AWS CLI flow** for your case so you can do everything from your VS Code terminal without opening the AWS Console.
+
+---
+
+## **1️⃣ Create the Policy**
+
+Save this JSON locally as `rds_select_secrets_policy.json`:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "SelectFromRDSDataAPI",
+            "Effect": "Allow",
+            "Action": [
+                "rds-data:ExecuteStatement"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "SecretsManagerAccess",
+            "Effect": "Allow",
+            "Action": [
+                "secretsmanager:CreateSecret",
+                "secretsmanager:PutSecretValue",
+                "secretsmanager:GetSecretValue"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+```
+
+Run:
+
+```bash
+aws iam create-policy \
+    --policy-name RDSDataAPISelectAndSecretsPolicy \
+    --policy-document file://rds_select_secrets_policy.json
+```
+
+📌 **Note:** This will return an ARN like:
+`arn:aws:iam::000520028352:policy/RDSDataAPISelectAndSecretsPolicy`
+
+---
+
+## **2️⃣ Attach the Policy to Your Federated Role**
+
+```bash
+aws iam attach-role-policy \
+    --role-name "BUAdministratorAccessRole/C26451E@ena.us.experian.local" \
+    --policy-arn arn:aws:iam::000520028352:policy/RDSDataAPISelectAndSecretsPolicy
+```
+
+---
+
+## **3️⃣ Create the Secret in AWS Secrets Manager**
+
+```bash
+aws secretsmanager create-secret \
+    --name sandbox-poc-db-secret \
+    --description "DB credentials for sandbox_poc" \
+    --secret-string '{"username":"sandbox_poc","password":"tzSJ5k8jRufeCPBo"}' \
+    --region us-east-1
+```
+
+This will return a Secret ARN like:
+`arn:aws:secretsmanager:us-east-1:000520028352:secret:sandbox-poc-db-secret-XXXX`
+
+---
+
+## **4️⃣ Query the RDS Database via Data API**
+
+Replace `your-cluster-name` and `your_database_name` with your actual values:
+
+```bash
+aws rds-data execute-statement \
+    --resource-arn arn:aws:rds:us-east-1:000520028352:cluster:your-cluster-name \
+    --secret-arn arn:aws:secretsmanager:us-east-1:000520028352:secret:sandbox-poc-db-secret-XXXX \
+    --database your_database_name \
+    --sql "SELECT * FROM your_table LIMIT 10" \
+    --region us-east-1
+```
+
+---
+
+⚠ **Important Notes:**
+
+* Your federated role must allow `iam:AttachRolePolicy` if you’re attaching the policy yourself. If not, an AWS admin needs to run **Step 2** for you.
+* If your RDS Data API is **not enabled**, you need to enable it for the cluster first.
+* The above setup gives **only SELECT access** (no UPDATE/DELETE/INSERT).
+
+---
+
+I can also make this **one single bash script** so you can run it end-to-end and be ready to query.
+
+Do you want me to make it as a **ready-to-run script**? That way you just replace a few variables and run once.
