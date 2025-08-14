@@ -93,3 +93,238 @@
     to_table: analytics.inventory
     to_column: location_id
     relationship_type: one-to-one
+
+
+
+import pandas as pd
+import json
+import yaml
+import re
+from io import StringIO
+
+# This function takes a DataFrame representing the Excel sheet and a string
+# containing the YAML relationships and generates the JSON schema.
+def generate_json_schema(df, relationships_yaml_string):
+    """
+    Generates a JSON schema from a pandas DataFrame and YAML relationships.
+
+    Args:
+        df (pd.DataFrame): A DataFrame containing the workbook data.
+        relationships_yaml_string (str): A string containing the YAML
+                                         relationships.
+
+    Returns:
+        dict: A dictionary representing the generated JSON schema.
+    """
+    # Get the table name from the first row of the DataFrame.
+    u# We'll use a regex to extract the name from the 'TABLE NAME' column,
+    # which looks like 'TABLE NAME: `table_name`'.
+    table_name_match = re.search(r'`(.+)`', df.loc[0, 'TABLE NAME'])
+    if not table_name_match:
+        print("Error: Could not determine table name from the DataFrame.")
+        return {}
+    table_name = table_name_match.group(1)
+
+    # Parse the YAML relationships.
+    relationships_data = yaml.safe_load(relationships_yaml_string)
+    all_relationships = relationships_data.get('Table Relationships', [])
+
+    # Find the relationships relevant to the current table.
+    relevant_relationships = []
+    for rel in all_relationships:
+        # Check if the current table is the 'from' or 'to' table in the relationship.
+        if rel['from_table'].split('.')[-1] == table_name or \
+           rel['to_table'].split('.')[-1] == table_name:
+            # We need to clean the relationship data to match the format in the example.
+            # The example shows only relationships where the current table is the 'from_table'.
+            # Let's check for both and format it to match the example.
+            relevant_relationships.append({
+                "relationship_name": rel['relationship_name'],
+                "description": rel['description'],
+                "from_table": rel['from_table'].split('.')[-1],
+                "from_column": rel['from_column'],
+                "to_table": rel['to_table'].split('.')[-1],
+                "to_column": rel['to_column'],
+                "relationship_type": rel['relationship_type']
+            })
+
+    # Convert the relationships list to a JSON string for the schema.
+    relationships_json_string = json.dumps({"relationships": relevant_relationships})
+
+    # Prepare the list of columns for the schema.
+    columns = []
+    # We iterate over the DataFrame, starting from the first row (index 0).
+    # Each row represents a column in the output schema.
+    for index, row in df.iterrows():
+        # Skip rows where the column name is empty or is the header row.
+        if pd.isna(row['COLUMN NAME']):
+            continue
+
+        column_schema = {
+            "Name": row['COLUMN NAME'],
+            "Type": row['DATA TYPE OF THE COLUMN'],
+            "Comment": row['COLUMN DESCRIPTION'],
+            "Parameters": {
+                "unique_values": row['UNIQUE VALUES IN THE COLUMN'],
+                "usage": row['USAGE']
+            }
+        }
+        columns.append(column_schema)
+
+    # Assemble the final schema dictionary.
+    json_schema = {
+        "Name": table_name,
+        "Description": f"{table_name} table derived from Excel data dictionary",
+        "StorageDescriptor": {
+            "Columns": columns,
+            "Location": f"s3://your-bucket/{table_name}/",
+            "InputFormat": "org.apache.hadoop.mapred.TextInputFormat",
+            "OutputFormat": "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat",
+            "SerdeInfo": {
+                "SerializationLibrary": "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe",
+                "Parameters": {"serialization.format": "1"}
+            }
+        },
+        "PartitionKeys": [],
+        "TableType": "EXTERNAL_TABLE",
+        "Parameters": {
+            "relationships": relationships_json_string
+        }
+    }
+
+    return json_schema
+
+# --- Main execution block ---
+
+# 1. Sample Data (assuming this is how you'd get the data from your Excel sheet)
+# This DataFrame is a representation of the sheet in your image, which is for 'vehicle_sales'.
+# In a real-world scenario, you would use pandas.read_excel('your_workbook.xlsx', sheet_name='your_sheet_name')
+excel_data_string = """
+TABLE NAME,COLUMN NAME,DATA TYPE OF THE COLUMN,COLUMN DESCRIPTION,UNIQUE VALUES IN THE COLUMN,USAGE
+TABLE NAME: `vehicle_sales`,idPK,"int","Unique identifier for each vehicle sale record.","e.g. 6286220, 6286224 etc","Used as primary key"
+,id,"int","Unique identifier for each vehicle sale record.","e.g. 6286220, 6286224 etc","Used as primary key"
+,sale_date,"date","Date the sale record was added.","`USAGE OF THE COLUMN`","`USAGE OF THE COLUMN`"
+,customer_id,"varchar","Customer ID for the customer.","`USAGE OF THE COLUMN`","`USAGE OF THE COLUMN`"
+,first_name,"varchar","Contains the first name of the customer.","`USAGE OF THE COLUMN`","`USAGE OF THE COLUMN`"
+,middle_name,"varchar","Contains the middle name of the customer.","`USAGE OF THE COLUMN`","`USAGE OF THE COLUMN`"
+,last_name,"varchar","Customer's last name.","`USAGE OF THE COLUMN`","`USAGE OF THE COLUMN`"
+,address_one,"varchar","Primary address of the customer.","`USAGE OF THE COLUMN`","`USAGE OF THE COLUMN`"
+,address_two,"varchar","Secondary address of the customer.","`USAGE OF THE COLUMN`","`USAGE OF THE COLUMN`"
+,city,"varchar","City of the customer's address.","`USAGE OF THE COLUMN`","`USAGE OF THE COLUMN`"
+,state,"varchar","State of the customer's address.","`USAGE OF THE COLUMN`","`USAGE OF THE COLUMN`"
+,zip,"varchar","Postal code of the customer's address.","`USAGE OF THE COLUMN`","`USAGE OF THE COLUMN`"
+,phone,"varchar","Customer's home phone address.","`USAGE OF THE COLUMN`","`USAGE OF THE COLUMN`"
+,cell_phone,"varchar","Customer's mobile phone number.","`USAGE OF THE COLUMN`","`USAGE OF THE COLUMN`"
+,email,"varchar","Customer's email address.","`USAGE OF THE COLUMN`","`USAGE OF THE COLUMN`"
+,extended_attributes,"varchar","Extended message attributes.","`USAGE OF THE COLUMN`","`USAGE OF THE COLUMN`"
+,location_id,"int","Location identifier for the vehicle deal.","`USAGE OF THE COLUMN`","`USAGE OF THE COLUMN`"
+"""
+
+df = pd.read_csv(StringIO(excel_data_string))
+
+# 2. Sample YAML Data (provided in your prompt)
+relationships_yaml = """
+Table Relationships:
+  - relationship_name: dps_settings_to_excluded_makes
+    description: Each DPS setting may exclude specific conquest makes for the same location.
+    from_table: cotillion_admin.dps_settings
+    from_column: location_id
+    to_table: cotillion_admin.dps_location_excluded_conquest_makes
+    to_column: location_id_fk
+    relationship_type: one-to-many
+
+  - relationship_name: dps_settings_to_map_areas
+    description: Each DPS setting may be associated with multiple map areas for the same location.
+    from_table: cotillion_admin.dps_settings
+    from_column: location_id
+    to_table: cotillion_admin.dps_map_areas
+    to_column: location_id
+    relationship_type: one-to-many
+  - relationship_name: dps_settings_to_location_makes
+    description: Each DPS setting may be associated with multiple location makes for the same location.
+    from_table: cotillion_admin.dps_settings
+    from_column: location_id
+    to_table: cotillion_admin.location_makes
+    to_column: location_id_fk
+    relationship_type: one-to-many
+
+  - relationship_name: crm_contact_to_entity_type
+    description: Each CRM contact is associated with a single entity type.
+    from_table: cotillion_crm.crm_entities_contacts
+    from_column: entity_type_id_fk
+    to_table: cotillion_admin.sys_entity_types
+    to_column: entity_type_id_pk
+    relationship_type: many-to-one
+
+  - relationship_name: channel_preferences_to_mosaic_definitions
+    description: Channel preferences are linked to mosaic definitions via household ID.
+    from_table: analytics.experian_mosaic_channel_preferences
+    from_column: household_id
+    to_table: analytics.experian_mosaic_definitions
+    to_column: household_id
+    relationship_type: one-to-one
+
+  - relationship_name: channel_preferences_to_mosaic_attributes
+    description: Channel preferences are linked to mosaic attributes via household ID.
+    from_table: analytics.experian_mosaic_channel_preferences
+    from_column: household_id
+    to_table: analytics.experian_mosaic_attributes
+    to_column: household_id
+    relationship_type: one-to-one
+
+  - relationship_name: message_attributes_to_extended_attributes
+    description: Message attributes are linked to extended message attributes via message ID.
+    from_table: analytics.experian_message_attributes
+    from_column: message_id
+    to_table: analytics.experian_extended_message_attributes
+    to_column: message_id
+    relationship_type: one-to-many
+
+  - relationship_name: messages_to_extended_attributes
+    description: Messages are linked to extended message attributes via message ID.
+    from_table: analytics.experian_messages
+    from_column: id
+    to_table: analytics.experian_extended_message_attributes
+    to_column: message_id
+    relationship_type: one-to-many
+
+  - relationship_name: messages_to_message_attributes
+    description: Messages are linked to message attributes via message ID.
+    from_table: analytics.experian_messages
+    from_column: id
+    to_table: analytics.experian_message_attributes
+    to_column: message_id
+    relationship_type: one-to-many
+
+  - relationship_name: mosaic_definitions_to_extended_attributes
+    description: Mosaic definitions are linked to extended message attributes via mosaic code.
+    from_table: analytics.experian_mosaic_definitions
+    from_column: code
+    to_table: analytics.experian_extended_message_attributes
+    to_column: mosaic_code
+    relationship_type: one-to-many
+
+  - relationship_name: mosaic_definitions_to_channel_preferences
+    description: Mosaic definitions are linked to channel preferences via mosaic code.
+    from_table: analytics.experian_mosaic_definitions
+    from_column: code
+    to_table: analytics.experian_mosaic_channel_preferences
+    to_column: mosaic_code
+    relationship_type: one-to-many
+
+  - relationship_name: vehicle_sales_to_inventory
+    description: Vehicle sales are matched with inventory records via location ID.
+    from_table: analytics.vehicle_sales
+    from_column: location_id
+    to_table: analytics.inventory
+    to_column: location_id
+    relationship_type: one-to-one
+"""
+
+# Generate the schema and print the result.
+generated_schema = generate_json_schema(df, relationships_yaml)
+
+# Print the final JSON in a human-readable format.
+if generated_schema:
+    print(json.dumps(generated_schema, indent=2))
+
